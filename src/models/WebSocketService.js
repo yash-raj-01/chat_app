@@ -2,7 +2,7 @@
  * WebSocketService - WebSocket client managing real-time chat & typing events
  * Part of the MVC Model layer.
  */
-import { WS_BASE_URL } from "../config/apiConfig";
+import { getWsBaseUrl } from "../config/apiConfig";
 
 export class WebSocketService {
   constructor() {
@@ -21,12 +21,13 @@ export class WebSocketService {
   /**
    * Establish WebSocket connection
    */
-  connect({ chatId, onMessage, onTyping, onOpen, onError, onClose }) {
+  async connect({ chatId, onMessage, onTyping, onOpen, onError, onClose }) {
     this.chatId = Number(chatId);
     this.handlers = { onMessage, onTyping, onOpen, onError, onClose };
 
     try {
-      this.socket = new WebSocket(WS_BASE_URL);
+      const wsUrl = await getWsBaseUrl();
+      this.socket = new WebSocket(wsUrl);
 
       this.socket.onopen = (event) => {
         if (this.handlers.onOpen) this.handlers.onOpen(event);

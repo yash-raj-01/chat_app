@@ -2,9 +2,10 @@
  * ApiService - REST client for communicating with the backend server
  * Part of the MVC Model layer.
  * 
- * Provides graceful fallback to local storage / bundled data when offline.
+ * Provides graceful fallback to local storage / bundled data when offline
+ * and resolves server URL dynamically from settings.
  */
-import { API_BASE_URL } from "../config/apiConfig";
+import { getApiBaseUrl } from "../config/apiConfig";
 import { StorageService } from "./StorageService";
 import { normalizeChat } from "./ChatModel";
 import initialChats from "../data/chats.json";
@@ -15,10 +16,11 @@ export const ApiService = {
    */
   async fetchChats() {
     try {
+      const baseUrl = await getApiBaseUrl();
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-      const response = await fetch(`${API_BASE_URL}/chats`, {
+      const response = await fetch(`${baseUrl}/chats`, {
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -54,10 +56,11 @@ export const ApiService = {
    */
   async fetchChatById(chatId) {
     try {
+      const baseUrl = await getApiBaseUrl();
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-      const response = await fetch(`${API_BASE_URL}/chats/${chatId}`, {
+      const response = await fetch(`${baseUrl}/chats/${chatId}`, {
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -106,7 +109,8 @@ export const ApiService = {
 
     // 2. Notify the server
     try {
-      await fetch(`${API_BASE_URL}/chats/${chatId}/read`, {
+      const baseUrl = await getApiBaseUrl();
+      await fetch(`${baseUrl}/chats/${chatId}/read`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });

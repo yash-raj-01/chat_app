@@ -1,18 +1,37 @@
 /**
  * Global API and Server Configuration
  *
- * For local testing:
- * - On physical phone with Expo Go: Set SERVER_HOST to your computer's LAN IP, e.g. "192.168.1.7:3001"
- * - On iOS Simulator / Android Emulator / Web: Use localhost or your LAN IP
+ * Provides dynamic server host resolution from AsyncStorage so users can
+ * change the host in Settings without editing code or rebuilding.
  */
-export const SERVER_HOST = "192.168.1.7:3001";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export const API_BASE_URL = `http://${SERVER_HOST}`;
-export const WS_BASE_URL = `ws://${SERVER_HOST}/ws`;
+export const DEFAULT_SERVER_HOST = "192.168.1.7:3001";
+export const CUSTOM_HOST_KEY = "chat_app:custom_server_host";
 
 export const STORAGE_KEYS = {
   CHATS: "chat_app:chats",
   MESSAGES_PREFIX: "chat_app:messages:",
   DRAFT_PREFIX: "chat_app:draft:",
   LAST_CHAT_ID: "chat_app:last_chat_id",
+  CUSTOM_HOST: CUSTOM_HOST_KEY,
 };
+
+export async function getServerHost() {
+  try {
+    const custom = await AsyncStorage.getItem(CUSTOM_HOST_KEY);
+    return custom?.trim() || DEFAULT_SERVER_HOST;
+  } catch {
+    return DEFAULT_SERVER_HOST;
+  }
+}
+
+export async function getApiBaseUrl() {
+  const host = await getServerHost();
+  return `http://${host}`;
+}
+
+export async function getWsBaseUrl() {
+  const host = await getServerHost();
+  return `ws://${host}/ws`;
+}
