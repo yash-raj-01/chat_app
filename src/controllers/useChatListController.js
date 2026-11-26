@@ -3,13 +3,15 @@
  * Part of the MVC Controller layer.
  *
  * Mediates between Model (ApiService, StorageService) and View (ChatListScreen).
+ * Includes search query and contact filtering.
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { ApiService } from "../models/ApiService";
 import { StorageService } from "../models/StorageService";
 
 export function useChatListController(navigation) {
   const [chats, setChats] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -55,6 +57,19 @@ export function useChatListController(navigation) {
   }, [navigation, loadChats]);
 
   /**
+   * Filter chats according to the search query
+   */
+  const filteredChats = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return chats;
+    return chats.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.lastMessage && c.lastMessage.toLowerCase().includes(q))
+    );
+  }, [chats, searchQuery]);
+
+  /**
    * User pressed a chat item - update unread count and navigate
    */
   const handleChatPress = useCallback(
@@ -80,8 +95,16 @@ export function useChatListController(navigation) {
     [navigation]
   );
 
+  const clearSearch = useCallback(() => {
+    setSearchQuery("");
+  }, []);
+
   return {
-    chats,
+    chats: filteredChats,
+    totalChatsCount: chats.length,
+    searchQuery,
+    setSearchQuery,
+    clearSearch,
     loading,
     refreshing,
     error,

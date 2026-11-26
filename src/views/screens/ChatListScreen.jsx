@@ -1,5 +1,5 @@
 /**
- * ChatListScreen - Main screen showing all conversations
+ * ChatListScreen - Main screen showing all conversations with search support
  * Part of the MVC View layer.
  */
 import React from "react";
@@ -13,11 +13,15 @@ import {
 } from "react-native";
 import { useChatListController } from "../../controllers/useChatListController";
 import ChatItem from "../components/ChatItem";
+import SearchBar from "../components/SearchBar";
 import { theme } from "../styles/theme";
 
 export default function ChatListScreen({ navigation }) {
   const {
     chats,
+    searchQuery,
+    setSearchQuery,
+    clearSearch,
     loading,
     refreshing,
     error,
@@ -28,6 +32,12 @@ export default function ChatListScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onClear={clearSearch}
+        />
+
         {error && (
           <View style={styles.banner}>
             <Text style={styles.bannerText}>{error}</Text>
@@ -47,7 +57,9 @@ export default function ChatListScreen({ navigation }) {
             contentContainerStyle={chats.length === 0 ? styles.emptyContainer : null}
             ListEmptyComponent={
               <View style={styles.center}>
-                <Text style={styles.emptyText}>No conversations yet</Text>
+                <Text style={styles.emptyText}>
+                  {searchQuery ? "No matching conversations found" : "No conversations yet"}
+                </Text>
               </View>
             }
             renderItem={({ item }) => (
