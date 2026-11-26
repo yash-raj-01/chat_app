@@ -9,6 +9,7 @@ import { StorageService } from "../models/StorageService";
 
 export function useSettingsController() {
   const [serverHost, setServerHost] = useState(SERVER_HOST);
+  const [autoResume, setAutoResume] = useState(false);
   const [savedStatus, setSavedStatus] = useState("");
   const [storageCount, setStorageCount] = useState(0);
 
@@ -25,6 +26,9 @@ export function useSettingsController() {
       if (customHost) {
         setServerHost(customHost);
       }
+
+      const resumeEnabled = await StorageService.getAutoResumeEnabled();
+      setAutoResume(resumeEnabled);
     } catch (err) {
       console.warn("[SettingsController] Failed to load settings:", err);
     }
@@ -40,6 +44,12 @@ export function useSettingsController() {
     } catch (err) {
       setSavedStatus("Failed to save configuration");
     }
+  };
+
+  const handleToggleAutoResume = async () => {
+    const nextVal = !autoResume;
+    setAutoResume(nextVal);
+    await StorageService.setAutoResumeEnabled(nextVal);
   };
 
   const handleClearCache = async () => {
@@ -58,6 +68,8 @@ export function useSettingsController() {
   return {
     serverHost,
     setServerHost,
+    autoResume,
+    handleToggleAutoResume,
     savedStatus,
     storageCount,
     handleSaveHost,

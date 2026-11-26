@@ -8,6 +8,7 @@ import {
   Text,
   TextInput,
   Pressable,
+  Switch,
   StyleSheet,
   ScrollView,
   SafeAreaView,
@@ -19,6 +20,8 @@ export default function SettingsScreen() {
   const {
     serverHost,
     setServerHost,
+    autoResume,
+    handleToggleAutoResume,
     savedStatus,
     storageCount,
     handleSaveHost,
@@ -31,7 +34,7 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Server Configuration</Text>
           <Text style={styles.description}>
-            Enter the LAN IP and port of your running chat backend server (printed by the server on start, e.g. 192.168.1.7:3001).
+            Enter the LAN IP and port of your running chat backend server (e.g. 192.168.1.7:3001).
           </Text>
 
           <TextInput
@@ -50,6 +53,24 @@ export default function SettingsScreen() {
           >
             <Text style={styles.buttonText}>Save Server IP</Text>
           </Pressable>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Session Preferences</Text>
+          <View style={styles.switchRow}>
+            <View style={styles.switchTextContainer}>
+              <Text style={styles.switchLabel}>Auto-resume last conversation</Text>
+              <Text style={styles.switchSubLabel}>
+                Reopen the chat you were viewing when restarting the app
+              </Text>
+            </View>
+            <Switch
+              value={autoResume}
+              onValueChange={handleToggleAutoResume}
+              trackColor={{ false: "#d2dce2", true: theme.colors.primaryLight }}
+              thumbColor={autoResume ? theme.colors.primary : "#f4f3f4"}
+            />
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -110,6 +131,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.textSecondary,
     lineHeight: 20,
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+  },
+  switchTextContainer: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  switchLabel: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  switchSubLabel: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   input: {
     height: 44,

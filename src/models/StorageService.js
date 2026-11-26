@@ -7,6 +7,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS } from "../config/apiConfig";
 
+const AUTO_RESUME_KEY = "chat_app:auto_resume_enabled";
+
 export const StorageService = {
   /**
    * Retrieve cached chat list from disk
@@ -135,6 +137,29 @@ export const StorageService = {
     } catch (error) {
       console.warn("[StorageService] Failed to get last active chat:", error);
       return null;
+    }
+  },
+
+  /**
+   * Check if auto resume setting is enabled
+   */
+  async getAutoResumeEnabled() {
+    try {
+      const val = await AsyncStorage.getItem(AUTO_RESUME_KEY);
+      return val === "true";
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Set auto resume setting
+   */
+  async setAutoResumeEnabled(enabled) {
+    try {
+      await AsyncStorage.setItem(AUTO_RESUME_KEY, enabled ? "true" : "false");
+    } catch (error) {
+      console.warn("[StorageService] Failed to save auto resume setting:", error);
     }
   },
 };
