@@ -39,31 +39,29 @@ export function useIndividualChatController(chatId, initialName) {
   /**
    * 2. Load message history and mark chat as read
    */
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadChatData() {
-      // Load messages from API (or local storage fallback)
-      const { data } = await ApiService.fetchChatById(chatId);
-      if (mounted && data?.messages) {
-        setMessages(data.messages);
-      }
-
-      // Mark chat as read
-      await ApiService.markAsRead(chatId);
+  const loadChatData = useCallback(async () => {
+    // Load messages from API (or local storage fallback)
+    const { data } = await ApiService.fetchChatById(chatId);
+    if (data?.messages) {
+      setMessages(data.messages);
     }
 
-    loadChatData();
-
-    return () => {
-      mounted = false;
-    };
+    // Mark chat as read
+    await ApiService.markAsRead(chatId);
   }, [chatId]);
+
+  useEffect(() => {
+    loadChatData();
+  }, [loadChatData]);
 
   /**
    * 3. Establish WebSocket connection for real-time messages & typing
    */
-  useEffect(() => {
+  const connectSocket = useCallback(() => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+
     const ws = new WebSocketService();
     socketRef.current = ws;
 
@@ -71,7 +69,10 @@ export function useIndividualChatController(chatId, initialName) {
       chatId,
       onOpen: () => setIsConnected(true),
       onClose: () => setIsConnected(false),
-      onError: (err) => console.warn("[IndividualChatController] WS Error:", err),
+      onError: (err) => {
+        console.warn("[IndividualChatController] WS Error:", err);
+        setIsConnected(false);
+      },
       onMessage: (incomingMessage) => {
         setTypingUser(null);
         setMessages((prev) => {
@@ -92,12 +93,16 @@ export function useIndividualChatController(chatId, initialName) {
         }
       },
     });
+  }, [chatId]);
+
+  useEffect(() => {
+    connectSocket();
 
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      ws.disconnect();
+      socketRef.current?.disconnect();
     };
-  }, [chatId]);
+  }, [connectSocket]);
 
   /**
    * 4. Handle draft input change - auto-saves draft to disk on every keystroke
@@ -119,7 +124,7 @@ export function useIndividualChatController(chatId, initialName) {
     if (!trimmed) return;
 
     // Send over WebSocket if available
-    const sentOverWs = socketRef.current?.sendMessage(trimmed);
+    socketRef.current?.sendMessage(trimmed);
 
     // Optimistic local update
     const newMsg = createMessage({
@@ -144,6 +149,7 @@ export function useIndividualChatController(chatId, initialName) {
     draft,
     typingUser,
     isConnected,
+    reconnect: connectSocket,
     handleDraftChange,
     sendMessage,
   };

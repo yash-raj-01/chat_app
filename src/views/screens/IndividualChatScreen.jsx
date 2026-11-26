@@ -4,7 +4,6 @@
  */
 import React, { useRef } from "react";
 import {
-  View,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +14,7 @@ import { useIndividualChatController } from "../../controllers/useIndividualChat
 import MessageBubble from "../components/MessageBubble";
 import MessageInput from "../components/MessageInput";
 import TypingIndicator from "../components/TypingIndicator";
+import ConnectionBanner from "../components/ConnectionBanner";
 import { theme } from "../styles/theme";
 
 export default function IndividualChatScreen({ route }) {
@@ -26,6 +26,8 @@ export default function IndividualChatScreen({ route }) {
     messages,
     draft,
     typingUser,
+    isConnected,
+    reconnect,
     handleDraftChange,
     sendMessage,
   } = useIndividualChatController(chatId, name);
@@ -36,6 +38,8 @@ export default function IndividualChatScreen({ route }) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={headerHeight}
     >
+      <ConnectionBanner isConnected={isConnected} onRetry={reconnect} />
+
       <FlatList
         ref={listRef}
         data={messages}
