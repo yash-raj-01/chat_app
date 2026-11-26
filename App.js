@@ -11,6 +11,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import ChatListScreen from "./src/views/screens/ChatListScreen";
 import IndividualChatScreen from "./src/views/screens/IndividualChatScreen";
 import SettingsScreen from "./src/views/screens/SettingsScreen";
+import ChatHeader from "./src/views/components/ChatHeader";
 import { theme } from "./src/views/styles/theme";
 
 const Stack = createNativeStackNavigator();
@@ -56,7 +57,12 @@ export default function App() {
             name="Individual Chat"
             component={IndividualChatScreen}
             options={({ route }) => ({
-              title: route.params?.name || "Chat",
+              headerTitle: () => (
+                <ChatHeader
+                  name={route.params?.name}
+                  avatar={route.params?.avatar}
+                />
+              ),
               headerBackTitle: "Chats",
             })}
           />
