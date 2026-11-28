@@ -7,10 +7,8 @@ import {
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
-  LayoutAnimation,
   Platform,
   StyleSheet,
-  UIManager,
   View,
 } from "react-native";
 import { useHeaderHeight } from "@react-navigation/elements";
@@ -22,19 +20,12 @@ import ConnectionBanner from "../components/ConnectionBanner";
 import MessageActionsModal from "../components/MessageActionsModal";
 import { theme } from "../styles/theme";
 
-if (
-  Platform.OS === "android" &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  try {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-  } catch (_) {}
-}
-
 export default function IndividualChatScreen({ route }) {
   const { chatId, name } = route.params || {};
   const headerHeight = useHeaderHeight();
   const listRef = useRef(null);
+  const initialHeightRef = useRef(0);
+  const [containerHeight, setContainerHeight] = useState(0);
   const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
 
   const {
@@ -56,9 +47,6 @@ export default function IndividualChatScreen({ route }) {
 
     const onKeyboardShow = (e) => {
       const height = e?.endCoordinates?.height || 0;
-      try {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      } catch (_) {}
       setAndroidKeyboardHeight(height);
       setTimeout(() => {
         listRef.current?.scrollToEnd({ animated: true });
@@ -66,9 +54,6 @@ export default function IndividualChatScreen({ route }) {
     };
 
     const onKeyboardHide = () => {
-      try {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      } catch (_) {}
       setAndroidKeyboardHeight(0);
     };
 
@@ -81,6 +66,25 @@ export default function IndividualChatScreen({ route }) {
     };
   }, []);
 
+  const handleContainerLayout = (e) => {
+    const { height } = e.nativeEvent.layout;
+    if (height > 0) {
+      if (
+        !initialHeightRef.current ||
+        (androidKeyboardHeight === 0 && height > initialHeightRef.current)
+      ) {
+        initialHeightRef.current = height;
+      }
+      setContainerHeight(height);
+    }
+  };
+
+  const osShrinkAmount =
+    initialHeightRef.current > 0 && containerHeight > 0
+      ? Math.max(0, initialHeightRef.current - containerHeight)
+      : 0;
+  const effectivePadding = Math.max(0, androidKeyboardHeight - osShrinkAmount);
+
   const Container = Platform.OS === "ios" ? KeyboardAvoidingView : View;
   const containerProps =
     Platform.OS === "ios"
@@ -88,13 +92,15 @@ export default function IndividualChatScreen({ route }) {
           behavior: "padding",
           keyboardVerticalOffset: headerHeight,
         }
-      : {};
+      : {
+          onLayout: handleContainerLayout,
+        };
 
   return (
     <Container
       style={[
         styles.container,
-        Platform.OS === "android" && { paddingBottom: androidKeyboardHeight },
+        Platform.OS === "android" && { paddingBottom: effectivePadding },
       ]}
       {...containerProps}
     >
@@ -112,7 +118,10 @@ export default function IndividualChatScreen({ route }) {
         renderItem={({ item }) => (
           <MessageBubble
             message={item}
-            onLongPress={setSelectedMessage}
+            onLongPress={(msg) => {
+              Keyboard.dismiss();
+              setSelectedMessage(msg);
+            }}
           />
         )}
       />
