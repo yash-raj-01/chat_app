@@ -23,6 +23,12 @@
     },
     "plugins": [
       "expo-status-bar"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4179636c-6f24-4f23-bfd9-ae6f5d0aa2ec"
+      }
+    },
+    "owner": "yash2610"
   }
 }
