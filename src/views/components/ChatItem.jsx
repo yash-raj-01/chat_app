@@ -5,9 +5,14 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { theme } from "../styles/theme";
+import { getAvatarColor } from "../../utils/avatarColors";
+import { formatRelativeTime } from "../../utils/dateFormatter";
 
 export default function ChatItem({ chat, onPress }) {
   if (!chat) return null;
+
+  const avatarBg = getAvatarColor(chat.name);
+  const formattedTime = formatRelativeTime(chat.lastTime);
 
   return (
     <Pressable
@@ -16,7 +21,7 @@ export default function ChatItem({ chat, onPress }) {
       accessibilityRole="button"
       accessibilityLabel={`Chat with ${chat.name}`}
     >
-      <View style={styles.avatar}>
+      <View style={[styles.avatar, { backgroundColor: avatarBg }]}>
         <Text style={styles.avatarText}>{chat.avatar}</Text>
       </View>
 
@@ -30,7 +35,7 @@ export default function ChatItem({ chat, onPress }) {
       </View>
 
       <View style={styles.right}>
-        <Text style={styles.time}>{chat.lastTime || ""}</Text>
+        <Text style={styles.time}>{formattedTime}</Text>
         {Number(chat.unreadCount) > 0 && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{chat.unreadCount}</Text>
@@ -58,7 +63,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: theme.colors.primary,
     justifyContent: "center",
     alignItems: "center",
   },

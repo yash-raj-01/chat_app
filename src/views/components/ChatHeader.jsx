@@ -5,11 +5,14 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { theme } from "../styles/theme";
+import { getAvatarColor } from "../../utils/avatarColors";
 
 export default function ChatHeader({ name = "Chat", avatar = "" }) {
+  const avatarBg = getAvatarColor(name);
+
   return (
     <View style={styles.container}>
-      <View style={styles.avatar}>
+      <View style={[styles.avatar, { backgroundColor: avatarBg }]}>
         <Text style={styles.avatarText}>{avatar || name.charAt(0).toUpperCase()}</Text>
       </View>
       <View style={styles.meta}>
@@ -32,7 +35,6 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: theme.colors.primary,
     justifyContent: "center",
     alignItems: "center",
   },
