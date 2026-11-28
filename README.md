@@ -45,6 +45,7 @@ chat_app/
 │   │   │   ├── MessageInput.jsx           # Input bar with send button
 │   │   │   ├── SearchBar.jsx              # Search and filtering component
 │   │   │   ├── ConnectionBanner.jsx       # Real-time WebSocket connectivity status
+│   │   │   ├── MessageActionsModal.jsx    # Floating emoji reaction bar and message deletion
 │   │   │   └── TypingIndicator.jsx        # "X is typing…" broadcast indicator
 │   │   └── styles/
 │   │       └── theme.js                   # Unified design system tokens (colors, typography, spacing)

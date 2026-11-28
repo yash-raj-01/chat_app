@@ -4,7 +4,7 @@
  *
  * Mediates between Model (ApiService, StorageService, WebSocketService, OutboxService)
  * and View (IndividualChatScreen).
- * Includes instant cache loading, offline message queueing, and multi-transport delivery.
+ * Includes instant cache loading, offline message queueing, emoji reactions, and deletion.
  */
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ApiService } from "../models/ApiService";
@@ -18,6 +18,7 @@ export function useIndividualChatController(chatId, initialName) {
   const [draft, setDraft] = useState("");
   const [typingUser, setTypingUser] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
 
   const socketRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -218,11 +219,59 @@ export function useIndividualChatController(chatId, initialName) {
     await StorageService.clearDraft(chatId);
   }, [draft, chatId]);
 
+  /**
+   * 5. Toggle an emoji reaction on a message
+   */
+  const handleToggleReaction = useCallback(
+    (messageId, emoji) => {
+      setMessages((prev) => {
+        const updated = prev.map((m) => {
+          if (m.id !== messageId) return m;
+          const currentReactions = m.reactions || [];
+          const exists = currentReactions.includes(emoji);
+          const nextReactions = exists
+            ? currentReactions.filter((r) => r !== emoji)
+            : [...currentReactions, emoji];
+
+          return { ...m, reactions: nextReactions };
+        });
+
+        StorageService.saveMessages(chatId, updated);
+        return updated;
+      });
+      setSelectedMessage(null);
+    },
+    [chatId]
+  );
+
+  /**
+   * 6. Delete a message from the conversation
+   */
+  const handleDeleteMessage = useCallback(
+    (messageId) => {
+      setMessages((prev) => {
+        const updated = prev.filter((m) => m.id !== messageId);
+        StorageService.saveMessages(chatId, updated);
+        const lastMsg = updated[updated.length - 1];
+        if (lastMsg) {
+          StorageService.updateChatLastMessage(chatId, lastMsg.text, lastMsg.time);
+        }
+        return updated;
+      });
+      setSelectedMessage(null);
+    },
+    [chatId]
+  );
+
   return {
     messages,
     draft,
     typingUser,
     isConnected,
+    selectedMessage,
+    setSelectedMessage,
+    handleToggleReaction,
+    handleDeleteMessage,
     reconnect: connectSocket,
     handleDraftChange,
     sendMessage,

@@ -25,12 +25,16 @@ export function createMessage({
   sender = "me",
   text = "",
   time = formatTime(),
+  status = "sent",
+  reactions = [],
 }) {
   return {
     id: Number(id),
     sender,
     text: String(text).trim(),
     time: time || formatTime(),
+    status,
+    reactions: Array.isArray(reactions) ? reactions : [],
   };
 }
 

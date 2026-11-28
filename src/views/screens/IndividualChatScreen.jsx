@@ -1,10 +1,9 @@
 /**
- * IndividualChatScreen - Single conversation screen with live chat & drafts
+ * IndividualChatScreen - Single conversation screen with live chat, reactions & drafts
  * Part of the MVC View layer.
  */
 import React, { useRef } from "react";
 import {
-  View,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +15,7 @@ import MessageBubble from "../components/MessageBubble";
 import MessageInput from "../components/MessageInput";
 import TypingIndicator from "../components/TypingIndicator";
 import ConnectionBanner from "../components/ConnectionBanner";
+import MessageActionsModal from "../components/MessageActionsModal";
 import { theme } from "../styles/theme";
 
 export default function IndividualChatScreen({ route }) {
@@ -28,6 +28,10 @@ export default function IndividualChatScreen({ route }) {
     draft,
     typingUser,
     isConnected,
+    selectedMessage,
+    setSelectedMessage,
+    handleToggleReaction,
+    handleDeleteMessage,
     reconnect,
     handleDraftChange,
     sendMessage,
@@ -49,7 +53,12 @@ export default function IndividualChatScreen({ route }) {
         onContentSizeChange={() =>
           listRef.current?.scrollToEnd({ animated: true })
         }
-        renderItem={({ item }) => <MessageBubble message={item} />}
+        renderItem={({ item }) => (
+          <MessageBubble
+            message={item}
+            onLongPress={setSelectedMessage}
+          />
+        )}
       />
 
       <TypingIndicator username={typingUser} />
@@ -59,6 +68,14 @@ export default function IndividualChatScreen({ route }) {
         onChangeText={handleDraftChange}
         onSend={sendMessage}
         placeholder="Message"
+      />
+
+      <MessageActionsModal
+        visible={Boolean(selectedMessage)}
+        message={selectedMessage}
+        onClose={() => setSelectedMessage(null)}
+        onSelectReaction={handleToggleReaction}
+        onDeleteMessage={handleDeleteMessage}
       />
     </KeyboardAvoidingView>
   );
