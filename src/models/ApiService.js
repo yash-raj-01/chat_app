@@ -18,7 +18,7 @@ export const ApiService = {
     try {
       const baseUrl = await getApiBaseUrl();
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
 
       const response = await fetch(`${baseUrl}/chats`, {
         signal: controller.signal,
@@ -58,7 +58,7 @@ export const ApiService = {
     try {
       const baseUrl = await getApiBaseUrl();
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
 
       const response = await fetch(`${baseUrl}/chats/${chatId}`, {
         signal: controller.signal,
@@ -71,11 +71,6 @@ export const ApiService = {
 
       const data = await response.json();
       const normalized = normalizeChat(data);
-
-      // Cache messages for this chat
-      if (normalized.messages) {
-        await StorageService.saveMessages(chatId, normalized.messages);
-      }
 
       return { data: normalized, fromCache: false };
     } catch (error) {
@@ -98,6 +93,32 @@ export const ApiService = {
       const normalized = found ? normalizeChat(found) : { id: Number(chatId), messages: [] };
       return { data: normalized, fromCache: true };
     }
+  },
+
+  /**
+   * Send a message via REST endpoint as fallback
+   */
+  async sendMessage(chatId, text) {
+    try {
+      const baseUrl = await getApiBaseUrl();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+      const response = await fetch(`${baseUrl}/chats/${chatId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, sender: "me" }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (err) {
+      console.warn("[ApiService] REST sendMessage fallback failed:", err.message);
+    }
+    return null;
   },
 
   /**

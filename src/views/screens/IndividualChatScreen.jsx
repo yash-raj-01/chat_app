@@ -4,6 +4,7 @@
  */
 import React, { useRef } from "react";
 import {
+  View,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -43,13 +44,10 @@ export default function IndividualChatScreen({ route }) {
       <FlatList
         ref={listRef}
         data={messages}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={(item) => String(item.id || Math.random())}
         contentContainerStyle={styles.list}
         onContentSizeChange={() =>
           listRef.current?.scrollToEnd({ animated: true })
-        }
-        onLayout={() =>
-          listRef.current?.scrollToEnd({ animated: false })
         }
         renderItem={({ item }) => <MessageBubble message={item} />}
       />
@@ -73,7 +71,6 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: theme.spacing.md,
-    flexGrow: 1,
-    justifyContent: "flex-end",
+    paddingBottom: 8,
   },
 });

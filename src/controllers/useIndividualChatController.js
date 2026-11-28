@@ -4,14 +4,14 @@
  *
  * Mediates between Model (ApiService, StorageService, WebSocketService, OutboxService)
  * and View (IndividualChatScreen).
- * Includes offline message queueing and auto-flush on reconnect.
+ * Includes instant cache loading, offline message queueing, and multi-transport delivery.
  */
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ApiService } from "../models/ApiService";
 import { StorageService } from "../models/StorageService";
 import { OutboxService } from "../models/OutboxService";
 import { WebSocketService } from "../models/WebSocketService";
-import { createMessage } from "../models/ChatModel";
+import { createMessage, formatTime } from "../models/ChatModel";
 
 export function useIndividualChatController(chatId, initialName) {
   const [messages, setMessages] = useState([]);
@@ -23,46 +23,52 @@ export function useIndividualChatController(chatId, initialName) {
   const typingTimeoutRef = useRef(null);
 
   /**
-   * 1. Load persisted draft on startup
+   * 1. Initialize chat: instant cache load + draft restore + background sync
    */
   useEffect(() => {
     let mounted = true;
-    StorageService.getDraft(chatId).then((savedDraft) => {
-      if (mounted && savedDraft) {
-        setDraft(savedDraft);
+
+    async function initChat() {
+      if (!chatId) return;
+
+      // Load draft
+      const savedDraft = await StorageService.getDraft(chatId);
+      if (mounted && savedDraft) setDraft(savedDraft);
+
+      // Load cached messages immediately (zero delay)
+      const cached = await StorageService.getMessages(chatId);
+      if (mounted && cached && cached.length > 0) {
+        setMessages(cached);
       }
-    });
+
+      // Check pending outbox messages
+      const pending = await OutboxService.getPendingMessages(chatId);
+
+      // Fetch fresh messages from server in background
+      const { data } = await ApiService.fetchChatById(chatId);
+      if (mounted) {
+        const serverMessages = data?.messages || [];
+        setMessages((prev) => {
+          const map = new Map();
+          for (const m of prev) map.set(m.id, m);
+          for (const m of serverMessages) map.set(m.id, m);
+          for (const m of pending) map.set(m.id, m);
+          const merged = Array.from(map.values()).sort((a, b) => (a.id || 0) - (b.id || 0));
+          StorageService.saveMessages(chatId, merged);
+          return merged;
+        });
+      }
+
+      // Mark chat as read
+      await ApiService.markAsRead(chatId);
+    }
+
+    initChat();
 
     return () => {
       mounted = false;
     };
   }, [chatId]);
-
-  /**
-   * 2. Load message history and mark chat as read
-   */
-  const loadChatData = useCallback(async () => {
-    // Load messages from API (or local storage fallback)
-    const { data } = await ApiService.fetchChatById(chatId);
-    let allMessages = data?.messages || [];
-
-    // Append any pending messages from outbox that haven't been confirmed
-    const pending = await OutboxService.getPendingMessages(chatId);
-    if (pending.length > 0) {
-      const existingIds = new Set(allMessages.map((m) => m.id));
-      const newPending = pending.filter((m) => !existingIds.has(m.id));
-      allMessages = [...allMessages, ...newPending];
-    }
-
-    setMessages(allMessages);
-
-    // Mark chat as read
-    await ApiService.markAsRead(chatId);
-  }, [chatId]);
-
-  useEffect(() => {
-    loadChatData();
-  }, [loadChatData]);
 
   /**
    * Flush pending outbox messages once connected to server
@@ -85,7 +91,7 @@ export function useIndividualChatController(chatId, initialName) {
   }, [chatId]);
 
   /**
-   * 3. Establish WebSocket connection for real-time messages & typing
+   * 2. Establish WebSocket connection for real-time messages & typing
    */
   const connectSocket = useCallback(() => {
     if (socketRef.current) {
@@ -109,9 +115,11 @@ export function useIndividualChatController(chatId, initialName) {
       onMessage: (incomingMessage) => {
         setTypingUser(null);
         setMessages((prev) => {
-          // Replace matching pending message or append
+          // Replace optimistic message matching by ID or text
           const existingIndex = prev.findIndex(
-            (m) => m.id === incomingMessage.id || (m.status === "pending" && m.text === incomingMessage.text)
+            (m) =>
+              m.id === incomingMessage.id ||
+              (m.sender === "me" && m.text === incomingMessage.text)
           );
 
           let updated;
@@ -123,6 +131,11 @@ export function useIndividualChatController(chatId, initialName) {
           }
 
           StorageService.saveMessages(chatId, updated);
+          StorageService.updateChatLastMessage(
+            chatId,
+            incomingMessage.text,
+            incomingMessage.time
+          );
           return updated;
         });
       },
@@ -148,7 +161,7 @@ export function useIndividualChatController(chatId, initialName) {
   }, [connectSocket]);
 
   /**
-   * 4. Handle draft input change - auto-saves draft to disk on every keystroke
+   * 3. Handle draft input change - auto-saves draft to disk on every keystroke
    */
   const handleDraftChange = useCallback(
     (text) => {
@@ -160,33 +173,45 @@ export function useIndividualChatController(chatId, initialName) {
   );
 
   /**
-   * 5. Send message - broadcasts over WebSocket or queues in outbox if offline
+   * 4. Send message - optimistic update + WebSocket + REST fallback + persistent cache
    */
   const sendMessage = useCallback(async () => {
     const trimmed = draft.trim();
     if (!trimmed) return;
 
-    const isLive = socketRef.current?.isOpen();
+    const timeStr = formatTime();
     const newMsg = createMessage({
       id: Date.now(),
       sender: "me",
       text: trimmed,
+      time: timeStr,
     });
+
+    const isLive = socketRef.current?.isOpen();
 
     if (isLive) {
       socketRef.current.sendMessage(trimmed);
       newMsg.status = "sent";
     } else {
-      // Queue offline for automatic flush when reconnected
       newMsg.status = "pending";
       await OutboxService.queueMessage(chatId, newMsg);
+      // Try REST endpoint in background
+      ApiService.sendMessage(chatId, trimmed).then((res) => {
+        if (res?.ok) {
+          OutboxService.removeMessage(chatId, newMsg.id);
+        }
+      });
     }
 
+    // Immediately update messages and persistent storage
     setMessages((prev) => {
       const updated = [...prev, newMsg];
       StorageService.saveMessages(chatId, updated);
       return updated;
     });
+
+    // Update last message in chat list cache
+    StorageService.updateChatLastMessage(chatId, trimmed, timeStr);
 
     // Clear draft in state and local storage
     setDraft("");

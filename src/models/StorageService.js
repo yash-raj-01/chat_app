@@ -36,6 +36,24 @@ export const StorageService = {
   },
 
   /**
+   * Update last message snippet in cached chat list
+   */
+  async updateChatLastMessage(chatId, text, time) {
+    try {
+      const chats = await this.getCachedChats();
+      if (!chats) return;
+      const updated = chats.map((c) =>
+        Number(c.id) === Number(chatId)
+          ? { ...c, lastMessage: text, lastTime: time }
+          : c
+      );
+      await this.saveCachedChats(updated);
+    } catch (error) {
+      console.warn(`[StorageService] Failed to update last message for chat ${chatId}:`, error);
+    }
+  },
+
+  /**
    * Retrieve cached messages for a specific chat
    */
   async getMessages(chatId) {

@@ -1,12 +1,19 @@
 /**
  * Global API and Server Configuration
  *
- * Provides dynamic server host resolution from AsyncStorage so users can
- * change the host in Settings without editing code or rebuilding.
+ * Automatically selects the best default host:
+ * - Android Emulator: 10.0.2.2:3001
+ * - iOS Simulator / macOS / Web: localhost:3001
+ * - Physical devices: LAN IP (e.g. 10.254.206.28:3001) or custom host from Settings
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
-export const DEFAULT_SERVER_HOST = "192.168.1.7:3001";
+export const LAN_SERVER_HOST = "10.254.206.28:3001";
+export const LOCAL_SERVER_HOST =
+  Platform.OS === "android" ? "10.0.2.2:3001" : "localhost:3001";
+
+export const DEFAULT_SERVER_HOST = LOCAL_SERVER_HOST;
 export const CUSTOM_HOST_KEY = "chat_app:custom_server_host";
 
 export const STORAGE_KEYS = {
@@ -20,7 +27,10 @@ export const STORAGE_KEYS = {
 export async function getServerHost() {
   try {
     const custom = await AsyncStorage.getItem(CUSTOM_HOST_KEY);
-    return custom?.trim() || DEFAULT_SERVER_HOST;
+    if (custom && custom.trim()) {
+      return custom.trim();
+    }
+    return DEFAULT_SERVER_HOST;
   } catch {
     return DEFAULT_SERVER_HOST;
   }

@@ -41,6 +41,28 @@ app.post("/chats/:id/read", (req, res) => {
   res.json({ ok: true });
 });
 
+app.post("/chats/:id/messages", (req, res) => {
+  const id = Number(req.params.id);
+  if (!chatExists(id)) return res.status(404).json({ error: "Chat not found" });
+  const text = String(req.body?.text ?? "").trim();
+  if (!text) return res.status(400).json({ error: "Message text is required" });
+  const sender = req.body?.sender || "me";
+  const message = addMessage(id, sender, text);
+  broadcast({ type: "message", chatId: id, message });
+
+  if (AUTO_REPLY && sender === "me") {
+    const chat = getChat(id);
+    const from = chat.name.split(" ")[0];
+    setTimeout(() => broadcast({ type: "typing", chatId: id, from }), 600);
+    setTimeout(() => {
+      const reply = addMessage(id, from, REPLIES[Math.floor(Math.random() * REPLIES.length)]);
+      broadcast({ type: "message", chatId: id, message: reply });
+    }, 1800);
+  }
+
+  res.json({ ok: true, message });
+});
+
 // ---------- WebSocket ----------
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
