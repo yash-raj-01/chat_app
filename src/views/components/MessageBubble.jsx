@@ -11,7 +11,6 @@ export default function MessageBubble({ message, onLongPress }) {
   if (!message) return null;
 
   const isMe = message.sender === "me";
-  const isPending = message.status === "pending";
   const hasReactions = Array.isArray(message.reactions) && message.reactions.length > 0;
 
   return (
@@ -32,7 +31,7 @@ export default function MessageBubble({ message, onLongPress }) {
           <Text style={[styles.time, isMe ? styles.mineTime : styles.theirsTime]}>
             {message.time || ""}
           </Text>
-          {isPending && <Text style={styles.pendingText}> · Sending…</Text>}
+          {isMe && <Text style={styles.statusText}> · Sent</Text>}
         </View>
       </Pressable>
 
@@ -107,10 +106,9 @@ const styles = StyleSheet.create({
   theirsTime: {
     color: theme.colors.textSecondary,
   },
-  pendingText: {
+  statusText: {
     fontSize: 10,
     color: "rgba(255, 255, 255, 0.8)",
-    fontStyle: "italic",
   },
   reactionsBadge: {
     flexDirection: "row",

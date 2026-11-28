@@ -194,7 +194,7 @@ export function useIndividualChatController(chatId, initialName) {
       socketRef.current.sendMessage(trimmed);
       newMsg.status = "sent";
     } else {
-      newMsg.status = "pending";
+      newMsg.status = "sent";
       await OutboxService.queueMessage(chatId, newMsg);
       // Try REST endpoint in background
       ApiService.sendMessage(chatId, trimmed).then((res) => {
