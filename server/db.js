@@ -2,9 +2,10 @@
 // On first run it creates the tables and copies data/chats.json into them.
 import Database from "better-sqlite3";
 import { readFileSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-const DB_FILE = new URL("./chat.db", import.meta.url).pathname;
-const SEED_FILE = new URL("./data/chats.json", import.meta.url).pathname;
+const DB_FILE = fileURLToPath(new URL("./chat.db", import.meta.url));
+const SEED_FILE = fileURLToPath(new URL("./data/chats.json", import.meta.url));
 
 export const db = new Database(DB_FILE);
 db.pragma("journal_mode = WAL");
