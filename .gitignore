@@ -13,7 +13,7 @@ ios/
 android/
 
 # Database and logs
-server/chat.db
+server/chat.db*
 server/node_modules/
 *.log
 npm-debug.log*
